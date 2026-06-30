@@ -11,8 +11,9 @@ const port = process.env.PORT || 3000;
 const openaiKey = process.env.OPENAI_API_KEY;
 
 if (!openaiKey) {
-  console.error("OPENAI_API_KEY is required in .env");
-  process.exit(1);
+  console.error("OPENAI_API_KEY is not set");
+  // 로컬에서만 강제 종료, Vercel 환경에선 요청 시 에러 반환
+  if (!process.env.VERCEL) process.exit(1);
 }
 
 const openai = new OpenAI({ apiKey: openaiKey });
@@ -22,6 +23,15 @@ const __dirname = path.dirname(__filename);
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+
+// 배포 환경 진단용: /health 에서 API 키 설정 여부 확인 가능
+app.get("/health", (_req, res) => {
+  res.json({
+    status: "ok",
+    node: process.version,
+    apiKeySet: !!process.env.OPENAI_API_KEY,
+  });
+});
 
 const SYSTEM_PROMPT = `당신은 포켓몬 세계의 오박사(Professor Oak)입니다.
 답변 순서를 반드시 지키세요:
@@ -66,11 +76,18 @@ app.post("/chat", async (req, res) => {
   } catch (error) {
     const status = error?.status ?? 500;
     const detail = error?.message ?? "OpenAI request failed";
-    console.error(`OpenAI error [${status}]:`, detail);
+    console.error(`[OpenAI error] type=${error?.constructor?.name} status=${status} msg=${detail}`);
+    console.error(`[env] apiKeySet=${!!process.env.OPENAI_API_KEY} node=${process.version}`);
+    if (error?.cause) console.error(`[cause]`, error.cause);
     res.status(500).json({ error: detail });
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running at http://localhost:${port}`);
-});
+// 로컬 실행 시에만 listen (Vercel은 앱을 직접 import해서 실행)
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Server running at http://localhost:${port}`);
+  });
+}
+
+export default app;

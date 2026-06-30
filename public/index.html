@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>오박사의 포켓몬 도감</title>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        min-height: 100vh;
+        background: radial-gradient(ellipse at top, #1a1a3e 0%, #0d0d1a 100%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: 'Courier New', monospace;
+        padding: 20px;
+      }
+
+      /* ── 외형 케이스 ── */
+      .pokedex {
+        width: min(860px, 100%);
+        background: linear-gradient(160deg, #e8000d 0%, #c0000a 60%, #9a0008 100%);
+        border-radius: 24px 24px 20px 20px;
+        padding: 22px 22px 18px;
+        box-shadow:
+          0 0 0 5px #6b0006,
+          0 30px 80px rgba(0, 0, 0, 0.7),
+          inset 0 1px 0 rgba(255,255,255,0.15);
+        position: relative;
+      }
+
+      /* ── 상단 헤더 ── */
+      .pokedex-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+
+      .big-light {
+        width: 52px;
+        height: 52px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 30%, #a8d8ff, #1e90ff 50%, #0a5ca8);
+        border: 4px solid #111;
+        box-shadow: 0 0 20px #1e90ff99, inset 0 -3px 6px rgba(0,0,0,0.4);
+        flex-shrink: 0;
+      }
+
+      .small-lights {
+        display: flex;
+        gap: 7px;
+        flex-shrink: 0;
+      }
+
+      .dot {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        border: 2px solid #111;
+      }
+      .dot.red    { background: #ff5555; box-shadow: 0 0 6px #ff5555aa; }
+      .dot.yellow { background: #ffd700; box-shadow: 0 0 6px #ffd700aa; }
+      .dot.green  { background: #55ff55; box-shadow: 0 0 6px #55ff55aa; }
+
+      .header-title {
+        margin-left: auto;
+        text-align: right;
+      }
+
+      .header-title h1 {
+        color: #ffd700;
+        font-size: 1.3rem;
+        font-weight: bold;
+        letter-spacing: 3px;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      }
+
+      .header-title p {
+        color: #ffaa00cc;
+        font-size: 0.6rem;
+        letter-spacing: 2px;
+        margin-top: 2px;
+      }
+
+      /* ── 힌지 라인 ── */
+      .hinge {
+        height: 6px;
+        background: #6b0006;
+        margin: 0 -22px 18px;
+        box-shadow: inset 0 2px 4px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.05);
+      }
+
+      /* ── 메인 그리드 ── */
+      .pokedex-body {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      /* ── 스크린 공통 ── */
+      .screen-wrap {
+        background: #1a1a1a;
+        border-radius: 14px;
+        padding: 10px;
+        border: 3px solid #111;
+        box-shadow: inset 0 3px 12px rgba(0,0,0,0.9), 0 1px 0 rgba(255,255,255,0.05);
+      }
+
+      .screen-label {
+        color: #555;
+        font-size: 0.55rem;
+        letter-spacing: 3px;
+        text-align: center;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+      }
+
+      /* ── 왼쪽: 포켓몬 스크린 ── */
+      .pokemon-screen {
+        background: linear-gradient(160deg, #0b2e0b, #1a4d1a);
+        border-radius: 10px;
+        height: 270px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+
+      /* 스캔라인 효과 */
+      .pokemon-screen::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          transparent,
+          transparent 3px,
+          rgba(0,0,0,0.08) 3px,
+          rgba(0,0,0,0.08) 4px
+        );
+        pointer-events: none;
+      }
+
+      /* 주사선 애니메이션 */
+      .scan-line {
+        position: absolute;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #44ff8888, transparent);
+        animation: scan 4s linear infinite;
+        pointer-events: none;
+      }
+      @keyframes scan {
+        0%   { top: 0;    opacity: 0.8; }
+        80%  { opacity: 0.5; }
+        100% { top: 100%; opacity: 0; }
+      }
+
+      .pokemon-sprite {
+        width: 170px;
+        height: 170px;
+        object-fit: contain;
+        filter: drop-shadow(0 0 14px rgba(100, 255, 100, 0.45));
+        transition: all 0.4s ease;
+        opacity: 0;
+        transform: scale(0.85);
+        position: relative;
+        z-index: 1;
+      }
+      .pokemon-sprite.loaded {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      .pokemon-info {
+        text-align: center;
+        position: relative;
+        z-index: 1;
+        margin-top: 6px;
+      }
+
+      .pokemon-kr-name {
+        color: #88ff88;
+        font-size: 1rem;
+        font-weight: bold;
+        letter-spacing: 3px;
+      }
+
+      .pokemon-en-name {
+        color: #448844;
+        font-size: 0.65rem;
+        letter-spacing: 2px;
+        margin-top: 2px;
+      }
+
+      .pokemon-number {
+        color: #33aa33;
+        font-size: 0.7rem;
+        margin-top: 2px;
+      }
+
+      .pokemon-types {
+        margin-top: 6px;
+        display: flex;
+        gap: 5px;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+
+      .type-badge {
+        padding: 2px 8px;
+        border-radius: 10px;
+        font-size: 0.6rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        border: 1px solid rgba(255,255,255,0.2);
+      }
+
+      /* ── 오른쪽: 텍스트 + 입력 ── */
+      .right-panel {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .text-screen {
+        background: linear-gradient(160deg, #08101e, #0f1f38);
+        border-radius: 10px;
+        min-height: 190px;
+        padding: 16px;
+        color: #88ccff;
+        font-size: 0.82rem;
+        line-height: 1.75;
+        overflow-y: auto;
+        flex: 1;
+      }
+      .text-screen::-webkit-scrollbar { width: 4px; }
+      .text-screen::-webkit-scrollbar-track { background: #08101e; }
+      .text-screen::-webkit-scrollbar-thumb { background: #2a4060; border-radius: 2px; }
+
+      .oak-label {
+        color: #ffd700;
+        font-weight: bold;
+        font-size: 0.75rem;
+        display: block;
+        margin-bottom: 8px;
+        letter-spacing: 1px;
+      }
+
+      .answer-text { color: #aaddff; }
+      .error-text  { color: #ff6666; }
+
+      /* ── 입력 영역 ── */
+      .input-wrap {
+        display: flex;
+        gap: 8px;
+      }
+
+      textarea {
+        flex: 1;
+        background: #111;
+        border: 2px solid #2a2a2a;
+        border-radius: 10px;
+        color: #88ccff;
+        padding: 10px 14px;
+        font-family: inherit;
+        font-size: 0.82rem;
+        resize: none;
+        height: 64px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      textarea:focus { border-color: #4477aa; }
+      textarea::placeholder { color: #334; }
+
+      .send-btn {
+        background: linear-gradient(160deg, #e8000d, #a0000a);
+        border: 2px solid #6b0006;
+        border-radius: 10px;
+        color: #fff;
+        font-family: inherit;
+        font-size: 0.75rem;
+        font-weight: bold;
+        letter-spacing: 1px;
+        cursor: pointer;
+        height: 64px;
+        min-width: 72px;
+        transition: filter 0.15s;
+      }
+      .send-btn:hover:not(:disabled) { filter: brightness(1.2); }
+      .send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+      /* ── 상태바 ── */
+      .status-bar {
+        display: flex;
+        justify-content: space-between;
+        color: #ffd70066;
+        font-size: 0.55rem;
+        letter-spacing: 2px;
+        padding: 0 2px;
+      }
+
+      #statusText { transition: color 0.3s; }
+      #statusText.loading { color: #ffd700; animation: blink 0.8s infinite; }
+      #statusText.ok     { color: #88ff88; }
+      #statusText.err    { color: #ff6666; }
+      @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+      /* ── 하단 장식 ── */
+      .pokedex-footer {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 2px solid #6b0006;
+      }
+
+      .dpad {
+        display: grid;
+        grid-template-columns: repeat(3, 18px);
+        grid-template-rows: repeat(3, 18px);
+        gap: 2px;
+      }
+      .dpad-btn {
+        background: #1a1a1a;
+        border: 1px solid #333;
+        border-radius: 2px;
+      }
+      .dpad-btn.center { border-radius: 50%; background: #222; }
+
+      .action-btns {
+        display: flex;
+        gap: 8px;
+      }
+      .action-btn {
+        width: 22px; height: 22px;
+        border-radius: 50%;
+        border: 2px solid #111;
+      }
+      .action-btn.a { background: #3399ff; box-shadow: 0 0 6px #3399ffaa; }
+      .action-btn.b { background: #ff4444; box-shadow: 0 0 6px #ff4444aa; }
+
+      .speaker {
+        margin-left: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+      }
+      .speaker-line {
+        width: 36px; height: 3px;
+        background: #6b0006;
+        border-radius: 2px;
+        transform: rotate(-30deg);
+      }
+
+      /* ── 반응형 ── */
+      @media (max-width: 580px) {
+        .pokedex-body { grid-template-columns: 1fr; }
+        .pokemon-screen { height: 220px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="pokedex">
+
+      <!-- 헤더 -->
+      <div class="pokedex-header">
+        <div class="big-light"></div>
+        <div class="small-lights">
+          <div class="dot red"></div>
+          <div class="dot yellow"></div>
+          <div class="dot green"></div>
+        </div>
+        <div class="header-title">
+          <h1>POKÉDEX</h1>
+          <p>오박사 연구소 · PROF. OAK EDITION</p>
+        </div>
+      </div>
+
+      <div class="hinge"></div>
+
+      <!-- 메인 영역 -->
+      <div class="pokedex-body">
+
+        <!-- 왼쪽: 포켓몬 스프라이트 -->
+        <div class="screen-wrap">
+          <div class="screen-label">◈ POKÉMON DATA ◈</div>
+          <div class="pokemon-screen">
+            <div class="scan-line"></div>
+            <img class="pokemon-sprite" id="pokemonSprite" src="" alt="포켓몬" />
+            <div class="pokemon-info">
+              <div class="pokemon-kr-name" id="pokemonKrName">- - -</div>
+              <div class="pokemon-en-name" id="pokemonEnName"></div>
+              <div class="pokemon-number" id="pokemonNumber">#---</div>
+              <div class="pokemon-types" id="pokemonTypes"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 오른쪽: 대화 -->
+        <div class="right-panel">
+          <div class="screen-wrap" style="flex:1; display:flex; flex-direction:column;">
+            <div class="screen-label">◈ OAK'S MESSAGE ◈</div>
+            <div class="text-screen" id="response">
+              <span class="oak-label">▶ 오박사 :</span>
+              <span class="answer-text">어서오세요! 나는 포켓몬 연구의 권위자, 오박사라고 합니다.<br>포켓몬에 관한 것이라면 무엇이든 물어보세요!</span>
+            </div>
+          </div>
+          <div class="input-wrap">
+            <textarea id="message" placeholder="오박사에게 무엇이든 물어보세요... (Enter 전송)"></textarea>
+            <button class="send-btn" id="sendButton">▶<br>전송</button>
+          </div>
+          <div class="status-bar">
+            <span>POKÉDEX OS v2.0</span>
+            <span id="statusText">◉ 준비 완료</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단 장식 -->
+      <div class="pokedex-footer">
+        <div class="dpad">
+          <div></div><div class="dpad-btn"></div><div></div>
+          <div class="dpad-btn"></div><div class="dpad-btn center"></div><div class="dpad-btn"></div>
+          <div></div><div class="dpad-btn"></div><div></div>
+        </div>
+        <div class="action-btns">
+          <div class="action-btn b"></div>
+          <div class="action-btn a"></div>
+        </div>
+        <div class="speaker">
+          <div class="speaker-line"></div>
+          <div class="speaker-line"></div>
+          <div class="speaker-line"></div>
+          <div class="speaker-line"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <script>
+      const messageInput  = document.getElementById("message");
+      const sendButton    = document.getElementById("sendButton");
+      const responseBox   = document.getElementById("response");
+      const spriteEl      = document.getElementById("pokemonSprite");
+      const krNameEl      = document.getElementById("pokemonKrName");
+      const enNameEl      = document.getElementById("pokemonEnName");
+      const numberEl      = document.getElementById("pokemonNumber");
+      const typesEl       = document.getElementById("pokemonTypes");
+      const statusEl      = document.getElementById("statusText");
+
+      // 대화 기록 유지 (OpenAI messages 형식)
+      const conversationHistory = [];
+
+      const TYPE_COLORS = {
+        normal:"#A8A878", fire:"#F08030", water:"#6890F0", electric:"#F8D030",
+        grass:"#78C850", ice:"#98D8D8", fighting:"#C03028", poison:"#A040A0",
+        ground:"#E0C068", flying:"#A890F0", psychic:"#F85888", bug:"#A8B820",
+        rock:"#B8A038", ghost:"#705898", dragon:"#7038F8", dark:"#705848",
+        steel:"#B8B8D0", fairy:"#EE99AC",
+      };
+
+      const TYPE_KR = {
+        normal:"노말", fire:"불꽃", water:"물", electric:"전기", grass:"풀",
+        ice:"얼음", fighting:"격투", poison:"독", ground:"땅", flying:"비행",
+        psychic:"에스퍼", bug:"벌레", rock:"바위", ghost:"고스트", dragon:"드래곤",
+        dark:"악", steel:"강철", fairy:"페어리",
+      };
+
+      function setStatus(msg, cls) {
+        statusEl.textContent = msg;
+        statusEl.className   = cls ?? "";
+      }
+
+      async function loadPokemon(name) {
+        try {
+          const res  = await fetch(`https://pokeapi.co/api/v2/pokemon/${name}`);
+          if (!res.ok) return;
+          const data = await res.json();
+
+          // 공식 일러스트 → 기본 스프라이트 순 우선순위
+          const artwork =
+            data.sprites?.other?.["official-artwork"]?.front_default ||
+            data.sprites?.front_default;
+
+          if (artwork) {
+            spriteEl.classList.remove("loaded");
+            spriteEl.onload = () => spriteEl.classList.add("loaded");
+            spriteEl.src = artwork;
+          }
+
+          numberEl.textContent = `#${String(data.id).padStart(3, "0")}`;
+          enNameEl.textContent = name.toUpperCase();
+
+          // 한국어 이름
+          try {
+            const specRes  = await fetch(data.species.url);
+            const specData = await specRes.json();
+            const kr = specData.names.find(n => n.language.name === "ko");
+            krNameEl.textContent = kr ? kr.name : name.toUpperCase();
+          } catch (_) {
+            krNameEl.textContent = name.toUpperCase();
+          }
+
+          // 타입 뱃지
+          typesEl.innerHTML = data.types.map(t => {
+            const tn  = t.type.name;
+            const col = TYPE_COLORS[tn] ?? "#888";
+            return `<span class="type-badge" style="background:${col}22; color:${col}; border-color:${col}55">
+                      ${TYPE_KR[tn] ?? tn}
+                    </span>`;
+          }).join("");
+
+        } catch (e) {
+          console.warn("PokéAPI 실패:", e);
+        }
+      }
+
+      // 시작 포켓몬: 스타터 중 랜덤
+      const STARTERS = ["bulbasaur","charmander","squirtle","pikachu","eevee","snorlax","gengar","mewtwo"];
+      loadPokemon(STARTERS[Math.floor(Math.random() * STARTERS.length)]);
+
+      // 전송
+      async function sendMessage() {
+        const msg = messageInput.value.trim();
+        if (!msg) return;
+
+        sendButton.disabled    = true;
+        messageInput.disabled  = true;
+        setStatus("◉ 포켓몬 도감 분석 중...", "loading");
+        responseBox.innerHTML  = `<span class="oak-label">▶ 오박사 :</span><span class="answer-text">잠시만요, 포켓몬 데이터를 검색하고 있습니다...</span>`;
+
+        try {
+          const res  = await fetch("/chat", {
+            method:  "POST",
+            headers: { "Content-Type": "application/json" },
+            body:    JSON.stringify({ message: msg, history: conversationHistory }),
+          });
+          const data = await res.json();
+
+          if (!res.ok) {
+            responseBox.innerHTML = `<span class="oak-label">▶ 오박사 :</span><span class="error-text">오류 발생: ${data.error}</span>`;
+            setStatus("◉ 오류", "err");
+          } else {
+            responseBox.innerHTML = `<span class="oak-label">▶ 오박사 :</span><span class="answer-text">${data.answer.replace(/\n/g,"<br>")}</span>`;
+            setStatus("◉ 전송 완료", "ok");
+
+            // 대화 기록에 추가 (assistant 답변은 텍스트만 저장)
+            conversationHistory.push({ role: "user", content: msg });
+            conversationHistory.push({ role: "assistant", content: data.answer });
+
+            if (data.pokemon) loadPokemon(data.pokemon);
+            setTimeout(() => setStatus("◉ 준비 완료"), 2500);
+          }
+        } catch (_) {
+          responseBox.innerHTML = `<span class="oak-label">▶ 오박사 :</span><span class="error-text">통신 오류가 발생했습니다.</span>`;
+          setStatus("◉ 오류", "err");
+        } finally {
+          sendButton.disabled   = false;
+          messageInput.disabled = false;
+          messageInput.value    = "";
+          messageInput.focus();
+        }
+      }
+
+      sendButton.addEventListener("click", sendMessage);
+      messageInput.addEventListener("keydown", e => {
+        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+      });
+    </script>
+  </body>
+</html>
